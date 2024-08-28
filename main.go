@@ -12,11 +12,13 @@ import (
 var (
 	numberOfWords int
 	startPrefix   string
+	prefixLength  int
 )
 
 func init() {
 	flag.IntVar(&numberOfWords, "w", 100, "Number of maximum words")
 	flag.StringVar(&startPrefix, "p", "Chapter 1", "Starting prefix") // p can be > l not reverse
+	flag.IntVar(&prefixLength, "l", 2, "Prefix length")
 	flag.Parse()
 }
 
@@ -24,23 +26,26 @@ func main() {
 	if numberOfWords < 0 || numberOfWords > 10000 {
 		fmt.Fprintln(os.Stderr, "Error: invalid amount of words.")
 		os.Exit(1)
+	} else if prefixLength > len(strings.Split(startPrefix, " ")) || prefixLength < 0 || prefixLength > 5 {
+		fmt.Fprintln(os.Stderr, "Error: incorrect input for prefix length.")
+		os.Exit(1)
 	}
 
 	text := ReadingStdin()
-	data := make(map[[2]string][]string)
+	data := make(map[string][]string)
 
 	if startPrefix != "Chapter 1" && !PrefixInText(text) {
 		fmt.Fprintln(os.Stderr, "Error: the given prefix is not in the text.")
 		os.Exit(1)
 	}
 
-	for i := 0; i < len(text)-2; i++ {
-		key := [2]string{text[i], text[i+1]}
-		data[key] = append(data[key], text[i+2])
+	for i := 0; i < len(text)-prefixLength; i++ {
+		key := sliceToString(text[i : i+prefixLength])
+		data[key] = append(data[key], text[i+prefixLength])
 	}
 	fmt.Print(startPrefix)
 
-	MarkovChainAlgorithm(strings.Split(startPrefix, " ")[0], strings.Split(startPrefix, " ")[1], data, 2)
+	MarkovChainAlgorithm(strings.Fields(startPrefix), data, prefixLength)
 }
 
 func ReadingStdin() []string {
@@ -60,30 +65,40 @@ func ReadingStdin() []string {
 	return strings.Fields(input)
 }
 
-func MarkovChainAlgorithm(w1, w2 string, data map[[2]string][]string, counter int) {
-	prefix := [2]string{w1, w2}
-	if len(data[prefix]) == 0 || counter >= numberOfWords {
+func MarkovChainAlgorithm(prefix []string, data map[string][]string, counter int) {
+	if len(data[sliceToString(prefix)]) == 0 || counter >= numberOfWords {
 		fmt.Println()
 		return
 	}
-	w3 := data[prefix][rand.Intn(len(data[prefix]))]
+	w3 := data[sliceToString(prefix)][rand.Intn(len(data[sliceToString(prefix)]))]
 	fmt.Print(" ", w3)
-	MarkovChainAlgorithm(w2, w3, data, counter+1)
+
+	// Shift the prefix and add the new word (w3)
+	newPrefix := append(prefix[1:], w3)
+
+	MarkovChainAlgorithm(newPrefix, data, counter+1)
 }
 
 func PrefixInText(text []string) bool {
-	inText := false
-	for _, word := range text {
-		counterPrefix := 0
-		for _, prefix := range strings.Split(startPrefix, " ") {
-			if word == prefix {
-				counterPrefix++
+	startPrefixWords := strings.Fields(startPrefix)
+
+	for i := 0; i <= len(text)-len(startPrefixWords); i++ {
+		matches := true
+		for j := 0; j < len(startPrefixWords); j++ {
+			if text[i+j] != startPrefixWords[j] {
+				matches = false
+				break
 			}
 		}
-		if counterPrefix == len(strings.Split(startPrefix, " "))-1 {
-			inText = true
-			break
+
+		if matches {
+			return true
 		}
 	}
-	return inText
+
+	return false
+}
+
+func sliceToString(slice []string) string {
+	return strings.Join(slice, " ")
 }
