@@ -1,5 +1,3 @@
-Here's a short `README.md` for your Markov Chain project:
-
 ---
 
 # markov-chain
