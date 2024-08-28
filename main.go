@@ -17,8 +17,15 @@ var (
 
 func init() {
 	flag.IntVar(&numberOfWords, "w", 100, "Number of maximum words")
-	flag.StringVar(&startPrefix, "p", "Chapter 1", "Starting prefix") // p can be > l not reverse
+	flag.StringVar(&startPrefix, "p", "Chapter 1", "Starting prefix")
 	flag.IntVar(&prefixLength, "l", 2, "Prefix length")
+
+	flag.Usage = func() {
+		fmt.Fprintln(os.Stderr, "Markov Chain text generator.")
+		fmt.Fprintln(os.Stderr, "\nUsage:\n  markovchain [-w <N>] [-p <S>] [-l <N>]\n  markovchain --help")
+		fmt.Fprintln(os.Stderr, "\nOptions:\n  --help  Show this screen.\n  -w N    Number of maximum words\n  -p S    Starting prefix\n  -l N    Prefix length")
+	}
+
 	flag.Parse()
 }
 
@@ -26,7 +33,7 @@ func main() {
 	if numberOfWords < 0 || numberOfWords > 10000 {
 		fmt.Fprintln(os.Stderr, "Error: invalid amount of words.")
 		os.Exit(1)
-	} else if prefixLength > len(strings.Split(startPrefix, " ")) || prefixLength < 0 || prefixLength > 5 {
+	} else if len(strings.Split(startPrefix, " ")) != prefixLength || prefixLength < 0 || prefixLength > 5 {
 		fmt.Fprintln(os.Stderr, "Error: incorrect input for prefix length.")
 		os.Exit(1)
 	}
@@ -73,7 +80,6 @@ func MarkovChainAlgorithm(prefix []string, data map[string][]string, counter int
 	w3 := data[sliceToString(prefix)][rand.Intn(len(data[sliceToString(prefix)]))]
 	fmt.Print(" ", w3)
 
-	// Shift the prefix and add the new word (w3)
 	newPrefix := append(prefix[1:], w3)
 
 	MarkovChainAlgorithm(newPrefix, data, counter+1)
