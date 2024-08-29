@@ -17,7 +17,7 @@ var (
 
 func init() {
 	flag.IntVar(&numberOfWords, "w", 100, "Number of maximum words")
-	flag.StringVar(&startPrefix, "p", "Chapter 1", "Starting prefix")
+	flag.StringVar(&startPrefix, "p", "", "Starting prefix")
 	flag.IntVar(&prefixLength, "l", 2, "Prefix length")
 
 	flag.Usage = func() {
@@ -30,28 +30,41 @@ func init() {
 }
 
 func main() {
-	if numberOfWords < 0 || numberOfWords > 10000 {
-		fmt.Fprintln(os.Stderr, "Error: invalid amount of words.")
-		os.Exit(1)
-	} else if len(strings.Split(startPrefix, " ")) != prefixLength || prefixLength < 0 || prefixLength > 5 {
-		fmt.Fprintln(os.Stderr, "Error: incorrect input for prefix length.")
-		os.Exit(1)
-	}
-
 	text := ReadingStdin()
-	data := make(map[string][]string)
-
-	if startPrefix != "Chapter 1" && !PrefixInText(text) {
-		fmt.Fprintln(os.Stderr, "Error: the given prefix is not in the text.")
+	if len(text) < 2 {
+		fmt.Fprintln(os.Stderr, "Error: not enough words to generate prefix")
 		os.Exit(1)
 	}
 
+	if prefixLength < 1 || prefixLength > 5 {
+		fmt.Fprintln(os.Stderr, "Error: length of prefix must be in between 1 and 5")
+		os.Exit(1)
+	}
+
+	if numberOfWords < 1 || numberOfWords > 10000 {
+		fmt.Fprintln(os.Stderr, "Error: number of words must be in between 1 and 10000")
+		os.Exit(1)
+	}
+
+	if len(startPrefix) == 0 {
+		startPrefix = strings.Join(text[:prefixLength], " ")
+	} else if len(strings.Fields(startPrefix)) != prefixLength {
+		fmt.Fprintf(os.Stderr, "Error: prefix must be '%d' words\n", prefixLength)
+		os.Exit(1)
+	}
+
+	if !PrefixInText(text) {
+		fmt.Fprintln(os.Stderr, "Error: prefix not found")
+		os.Exit(1)
+	}
+
+	data := make(map[string][]string)
 	for i := 0; i < len(text)-prefixLength; i++ {
 		key := sliceToString(text[i : i+prefixLength])
 		data[key] = append(data[key], text[i+prefixLength])
 	}
-	fmt.Print(startPrefix)
 
+	fmt.Print(startPrefix)
 	MarkovChainAlgorithm(strings.Fields(startPrefix), data, prefixLength)
 }
 
@@ -87,21 +100,11 @@ func MarkovChainAlgorithm(prefix []string, data map[string][]string, counter int
 
 func PrefixInText(text []string) bool {
 	startPrefixWords := strings.Fields(startPrefix)
-
 	for i := 0; i <= len(text)-len(startPrefixWords); i++ {
-		matches := true
-		for j := 0; j < len(startPrefixWords); j++ {
-			if text[i+j] != startPrefixWords[j] {
-				matches = false
-				break
-			}
-		}
-
-		if matches {
+		if sliceToString(text[i:i+len(startPrefixWords)]) == startPrefix {
 			return true
 		}
 	}
-
 	return false
 }
 
